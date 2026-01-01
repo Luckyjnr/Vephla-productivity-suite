@@ -19,12 +19,16 @@ const registerUser = async (email, password) => {
     throw new Error('EMAIL_EXISTS');
   }
 
+  // Check if this is the first user (make them admin)
+  const userCount = await User.countDocuments();
+  const role = userCount === 0 ? 'admin' : 'standard';
+
   // Hash password and create user
   const passwordHash = await hashPassword(password);
   const user = new User({
     email,
     passwordHash,
-    role: 'standard'
+    role
   });
 
   await user.save();

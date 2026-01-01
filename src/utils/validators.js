@@ -157,11 +157,76 @@ const customValidators = {
   }
 };
 
+// Export individual validation functions for direct use
+const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const validatePassword = (password) => {
+  // At least 6 characters for basic validation (can be made stricter later)
+  return password && password.length >= 6;
+};
+
+/**
+ * Sanitize note input to prevent XSS
+ */
+const sanitizeNote = (input) => {
+  if (typeof input !== 'string') return input;
+  
+  return input
+    .trim()
+    .replace(/[<>]/g, '') // Remove potential HTML tags
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, ''); // Remove event handlers
+};
+
+/**
+ * Validate note title
+ */
+const validateNoteTitle = (title) => {
+  return title && 
+         typeof title === 'string' && 
+         title.trim().length > 0 && 
+         title.trim().length <= 200;
+};
+
+/**
+ * Validate note content
+ */
+const validateNoteContent = (content) => {
+  return content && 
+         typeof content === 'string' && 
+         content.trim().length > 0 && 
+         content.trim().length <= 10000;
+};
+
+/**
+ * Validate note tags
+ */
+const validateNoteTags = (tags) => {
+  if (!tags) return true;
+  if (!Array.isArray(tags)) return false;
+  if (tags.length > 20) return false; // Max 20 tags
+  
+  return tags.every(tag => 
+    typeof tag === 'string' && 
+    tag.trim().length > 0 && 
+    tag.trim().length <= 50
+  );
+};
+
 module.exports = {
   validateUserRegistration,
   validateUserLogin,
   validateUserProfileUpdate,
   validateRoleUpdate,
   handleValidationErrors,
-  customValidators
+  customValidators,
+  validateEmail,
+  validatePassword,
+  sanitizeNote,
+  validateNoteTitle,
+  validateNoteContent,
+  validateNoteTags
 };
