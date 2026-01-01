@@ -6,6 +6,7 @@ require('dotenv').config();
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const noteRoutes = require('./routes/notes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/notes', noteRoutes);
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {
