@@ -216,6 +216,50 @@ const validateNoteTags = (tags) => {
   );
 };
 
+/**
+ * Validate task title
+ */
+const validateTaskTitle = (title) => {
+  return title && 
+         typeof title === 'string' && 
+         title.trim().length > 0 && 
+         title.trim().length <= 200;
+};
+
+/**
+ * Validate task description
+ */
+const validateTaskDescription = (description) => {
+  if (!description) return true; // Description is optional
+  return typeof description === 'string' && 
+         description.trim().length <= 1000;
+};
+
+/**
+ * Validate task status
+ */
+const validateTaskStatus = (status) => {
+  const validStatuses = ['pending', 'in-progress', 'completed'];
+  return validStatuses.includes(status);
+};
+
+/**
+ * Validate task priority
+ */
+const validateTaskPriority = (priority) => {
+  const validPriorities = ['low', 'medium', 'high'];
+  return validPriorities.includes(priority);
+};
+
+/**
+ * Validate due date
+ */
+const validateDueDate = (dueDate) => {
+  if (!dueDate) return true; // Due date is optional
+  const date = new Date(dueDate);
+  return date instanceof Date && !isNaN(date);
+};
+
 module.exports = {
   validateUserRegistration,
   validateUserLogin,
@@ -228,5 +272,10 @@ module.exports = {
   sanitizeNote,
   validateNoteTitle,
   validateNoteContent,
-  validateNoteTags
+  validateNoteTags,
+  validateTaskTitle,
+  validateTaskDescription,
+  validateTaskStatus,
+  validateTaskPriority,
+  validateDueDate
 };

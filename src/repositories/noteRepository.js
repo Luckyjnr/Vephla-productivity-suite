@@ -112,7 +112,7 @@ class NoteRepository {
    */
   async getTagsByUserId(userId) {
     const result = await Note.aggregate([
-      { $match: { userId: mongoose.Types.ObjectId(userId) } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       { $unwind: '$tags' },
       { $group: { _id: '$tags', count: { $sum: 1 } } },
       { $sort: { count: -1, _id: 1 } },
@@ -129,7 +129,7 @@ class NoteRepository {
    */
   async getStatsByUserId(userId) {
     const stats = await Note.aggregate([
-      { $match: { userId: mongoose.Types.ObjectId(userId) } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       {
         $group: {
           _id: null,
