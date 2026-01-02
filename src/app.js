@@ -7,6 +7,7 @@ const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const noteRoutes = require('./routes/notes');
+const taskRoutes = require('./routes/tasks');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/notes', noteRoutes);
+app.use('/tasks', taskRoutes);
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {
