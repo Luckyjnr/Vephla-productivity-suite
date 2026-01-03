@@ -260,6 +260,67 @@ const validateDueDate = (dueDate) => {
   return date instanceof Date && !isNaN(date);
 };
 
+/**
+ * Validate file description
+ */
+const validateFileDescription = (description) => {
+  if (!description) return true; // Description is optional
+  return typeof description === 'string' && 
+         description.trim().length <= 500;
+};
+
+/**
+ * Validate file tags
+ */
+const validateFileTags = (tags) => {
+  if (!tags) return true;
+  if (!Array.isArray(tags)) return false;
+  if (tags.length > 10) return false; // Max 10 tags
+  
+  return tags.every(tag => 
+    typeof tag === 'string' && 
+    tag.trim().length > 0 && 
+    tag.trim().length <= 50
+  );
+};
+
+/**
+ * Validate file size
+ */
+const validateFileSize = (size) => {
+  const maxSize = 50 * 1024 * 1024; // 50MB
+  return typeof size === 'number' && size > 0 && size <= maxSize;
+};
+
+/**
+ * Validate mime type
+ */
+const validateMimeType = (mimeType) => {
+  const allowedTypes = [
+    // Images
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+    // Documents
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    // Text files
+    'text/plain', 'text/csv', 'text/html', 'text/css', 'text/javascript',
+    'application/json', 'application/xml',
+    // Archives
+    'application/zip', 'application/x-rar-compressed', 'application/x-tar',
+    // Audio
+    'audio/mpeg', 'audio/wav', 'audio/ogg',
+    // Video
+    'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo'
+  ];
+  
+  return allowedTypes.includes(mimeType);
+};
+
 module.exports = {
   validateUserRegistration,
   validateUserLogin,
@@ -277,5 +338,9 @@ module.exports = {
   validateTaskDescription,
   validateTaskStatus,
   validateTaskPriority,
-  validateDueDate
+  validateDueDate,
+  validateFileDescription,
+  validateFileTags,
+  validateFileSize,
+  validateMimeType
 };
