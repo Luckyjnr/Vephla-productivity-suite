@@ -1,9 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const http = require('http');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
+const { initializeSocket } = require('./config/socket');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const noteRoutes = require('./routes/notes');
@@ -11,10 +13,17 @@ const taskRoutes = require('./routes/tasks');
 const fileRoutes = require('./routes/files');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Connect to database
 connectDB();
+
+// Initialize Socket.io
+const io = initializeSocket(server);
+
+// Make io available to routes
+app.set('io', io);
 
 // Basic middleware
 app.use(helmet());
@@ -66,9 +75,10 @@ app.use((err, req, res, next) => {
 
 // Start server
 if (require.main === module) {
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`🚀 Productivity Suite API running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
+    console.log(`🔌 Socket.io server initialized`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }
