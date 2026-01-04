@@ -79,7 +79,8 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public - commented out to allow our chat client
+# public
 
 # Storybook build outputs
 .out
@@ -106,8 +107,15 @@ lib-cov
 coverage
 *.lcov
 
-# Uploaded files (keep structure but ignore content)
-uploads/*
+# Uploaded files (ignore user uploads but keep test files)
+uploads/*.jpg
+uploads/*.jpeg
+uploads/*.png
+uploads/*.gif
+uploads/*.pdf
+uploads/*.doc
+uploads/*.docx
+# Keep directory structure and any subdirectories
 !uploads/.gitkeep
 
 # IDE files
