@@ -15,8 +15,10 @@ class MessageRepository {
       const message = new Message(messageData);
       await message.save();
       
-      // Populate sender info before returning
-      await message.populate('sender', 'email role');
+      // Populate sender info before returning (if sender exists)
+      if (message.sender) {
+        await message.populate('sender', 'email role name');
+      }
       return message;
     } catch (error) {
       console.error('Error creating message:', error);
@@ -51,7 +53,7 @@ class MessageRepository {
       const skip = (page - 1) * limit;
       
       const messages = await Message.find(query)
-        .populate('sender', 'email role')
+        .populate('sender', 'email role name')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -70,7 +72,7 @@ class MessageRepository {
   async getRecentMessages(room, limit = 20) {
     try {
       const messages = await Message.find({ room })
-        .populate('sender', 'email role')
+        .populate('sender', 'email role name')
         .sort({ createdAt: -1 })
         .limit(limit)
         .lean();
@@ -107,7 +109,7 @@ class MessageRepository {
       message.metadata.editedAt = new Date();
 
       await message.save();
-      await message.populate('sender', 'email role');
+      await message.populate('sender', 'email role name');
       
       return message;
     } catch (error) {
@@ -206,7 +208,7 @@ class MessageRepository {
         room,
         content: { $regex: searchTerm, $options: 'i' }
       })
-        .populate('sender', 'email role')
+        .populate('sender', 'email role name')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

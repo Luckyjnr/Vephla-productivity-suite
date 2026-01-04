@@ -2,7 +2,7 @@ const authService = require('../services/authService');
 
 const register = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, name } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
@@ -13,7 +13,7 @@ const register = async (req, res) => {
       });
     }
 
-    const result = await authService.registerUser(email, password);
+    const result = await authService.registerUser(email, password, name);
     res.status(201).json(result);
 
   } catch (error) {
@@ -57,7 +57,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, name } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({

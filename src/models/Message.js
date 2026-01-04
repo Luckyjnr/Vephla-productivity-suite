@@ -10,7 +10,9 @@ const messageSchema = new mongoose.Schema({
   sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: function() {
+      return this.messageType !== 'system';
+    }
   },
   room: {
     type: String,
@@ -56,7 +58,7 @@ messageSchema.virtual('senderInfo', {
   localField: 'sender',
   foreignField: '_id',
   justOne: true,
-  select: 'email role'
+  select: 'email role name'
 });
 
 // Ensure virtuals are included in JSON output
@@ -82,7 +84,7 @@ messageSchema.pre('save', function(next) {
 // Static method to get recent messages for a room
 messageSchema.statics.getRecentMessages = function(room, limit = 50) {
   return this.find({ room })
-    .populate('sender', 'email role')
+    .populate('sender', 'email role name')
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();
@@ -93,7 +95,7 @@ messageSchema.statics.getMessageHistory = function(room, page = 1, limit = 50) {
   const skip = (page - 1) * limit;
   
   return this.find({ room })
-    .populate('sender', 'email role')
+    .populate('sender', 'email role name')
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
@@ -102,14 +104,17 @@ messageSchema.statics.getMessageHistory = function(room, page = 1, limit = 50) {
 
 // Instance method to format message for client
 messageSchema.methods.toClientFormat = function() {
+  const senderInfo = this.sender ? {
+    id: this.sender._id || this.sender,
+    email: this.sender.email,
+    role: this.sender.role,
+    name: this.sender.name
+  } : null;
+
   return {
     id: this._id,
     content: this.content,
-    sender: {
-      id: this.sender._id || this.sender,
-      email: this.sender.email,
-      role: this.sender.role
-    },
+    sender: senderInfo,
     room: this.room,
     messageType: this.messageType,
     timestamp: this.createdAt.toISOString(),

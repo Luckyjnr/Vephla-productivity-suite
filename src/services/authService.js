@@ -3,7 +3,7 @@ const { hashPassword, comparePassword } = require('../utils/encryption');
 const { generateToken } = require('../utils/jwt');
 const { validateEmail, validatePassword } = require('../utils/validators');
 
-const registerUser = async (email, password) => {
+const registerUser = async (email, password, name) => {
   // Validate input
   if (!validateEmail(email)) {
     throw new Error('INVALID_EMAIL');
@@ -28,6 +28,7 @@ const registerUser = async (email, password) => {
   const user = new User({
     email,
     passwordHash,
+    name: name || email.split('@')[0], // Use provided name or email prefix
     role
   });
 
@@ -40,6 +41,7 @@ const registerUser = async (email, password) => {
     user: {
       id: user._id,
       email: user.email,
+      name: user.name,
       role: user.role,
       createdAt: user.createdAt
     },
@@ -60,6 +62,11 @@ const loginUser = async (email, password) => {
     throw new Error('INVALID_CREDENTIALS');
   }
 
+  // Ensure user has a name field (for backward compatibility)
+  if (!user.name) {
+    user.name = email.split('@')[0];
+  }
+
   // Update last login
   user.lastLoginAt = new Date();
   await user.save();
@@ -71,6 +78,7 @@ const loginUser = async (email, password) => {
     user: {
       id: user._id,
       email: user.email,
+      name: user.name,
       role: user.role,
       lastLoginAt: user.lastLoginAt
     },

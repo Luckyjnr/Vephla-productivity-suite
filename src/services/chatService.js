@@ -64,11 +64,12 @@ class ChatService {
         messages: messages.map(msg => ({
           id: msg._id,
           content: msg.content,
-          sender: {
+          sender: msg.sender ? {
             id: msg.sender._id,
             email: msg.sender.email,
-            role: msg.sender.role
-          },
+            role: msg.sender.role,
+            name: msg.sender.name
+          } : null,
           room: msg.room,
           messageType: msg.messageType,
           timestamp: msg.createdAt,
@@ -104,11 +105,12 @@ class ChatService {
       return messages.map(msg => ({
         id: msg._id,
         content: msg.content,
-        sender: {
+        sender: msg.sender ? {
           id: msg.sender._id,
           email: msg.sender.email,
-          role: msg.sender.role
-        },
+          role: msg.sender.role,
+          name: msg.sender.name
+        } : null,
         room: msg.room,
         messageType: msg.messageType,
         timestamp: msg.createdAt,
@@ -237,11 +239,12 @@ class ChatService {
       return messages.map(msg => ({
         id: msg._id,
         content: msg.content,
-        sender: {
+        sender: msg.sender ? {
           id: msg.sender._id,
           email: msg.sender.email,
-          role: msg.sender.role
-        },
+          role: msg.sender.role,
+          name: msg.sender.name
+        } : null,
         room: msg.room,
         messageType: msg.messageType,
         timestamp: msg.createdAt,
