@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
+const { validateTask, handleValidationErrors } = require('../utils/validators');
 const {
   createTask,
   getTasks,
@@ -31,10 +32,10 @@ router.patch('/bulk/status', bulkUpdateStatus);
 router.get('/status/:status', getTasksByStatus);
 
 // CRUD operations
-router.post('/', createTask);
+router.post('/', validateTask, handleValidationErrors, createTask);
 router.get('/', getTasks);
 router.get('/:id', getTaskById);
-router.put('/:id', updateTask);
+router.put('/:id', validateTask, handleValidationErrors, updateTask);
 router.delete('/:id', deleteTask);
 
 // Task completion

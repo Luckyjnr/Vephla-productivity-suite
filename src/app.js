@@ -8,6 +8,7 @@ require('dotenv').config();
 const connectDB = require('./config/database');
 const { initializeSocket } = require('./config/socket');
 const { createGraphQLServer } = require('./graphql/server');
+const { sanitizeInput, setSecurityHeaders, validateContentType } = require('./middleware/sanitization');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const noteRoutes = require('./routes/notes');
@@ -79,6 +80,11 @@ const authLimiter = rateLimit({
 
 // Apply general rate limiting to all routes
 app.use(limiter);
+
+// Security and sanitization middleware
+app.use(setSecurityHeaders);
+app.use(validateContentType);
+app.use(sanitizeInput);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -49,6 +49,102 @@ const validateUserLogin = [
 ];
 
 /**
+ * Validation rules for note creation/update
+ */
+const validateNote = [
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('Title is required')
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Title must be between 1 and 200 characters')
+    .customSanitizer(value => value.replace(/[<>]/g, '')),
+  
+  body('content')
+    .trim()
+    .notEmpty()
+    .withMessage('Content is required')
+    .isLength({ min: 1, max: 10000 })
+    .withMessage('Content must be between 1 and 10000 characters')
+    .customSanitizer(value => value.replace(/[<>]/g, '')),
+  
+  body('tags')
+    .optional()
+    .isArray({ max: 20 })
+    .withMessage('Tags must be an array with maximum 20 items')
+    .custom((tags) => {
+      if (tags && tags.some(tag => typeof tag !== 'string' || tag.trim().length === 0 || tag.trim().length > 50)) {
+        throw new Error('Each tag must be a non-empty string with maximum 50 characters');
+      }
+      return true;
+    })
+];
+
+/**
+ * Validation rules for task creation/update
+ */
+const validateTask = [
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('Title is required')
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Title must be between 1 and 200 characters')
+    .customSanitizer(value => value.replace(/[<>]/g, '')),
+  
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage('Description must not exceed 1000 characters')
+    .customSanitizer(value => value ? value.replace(/[<>]/g, '') : value),
+  
+  body('status')
+    .optional()
+    .isIn(['pending', 'in_progress', 'completed'])
+    .withMessage('Status must be pending, in_progress, or completed'),
+  
+  body('priority')
+    .optional()
+    .isIn(['low', 'medium', 'high'])
+    .withMessage('Priority must be low, medium, or high'),
+  
+  body('dueDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Due date must be a valid ISO 8601 date')
+    .custom((value) => {
+      if (value && new Date(value) < new Date()) {
+        throw new Error('Due date cannot be in the past');
+      }
+      return true;
+    })
+];
+
+/**
+ * Validation rules for file upload metadata
+ */
+const validateFileMetadata = [
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description must not exceed 500 characters')
+    .customSanitizer(value => value ? value.replace(/[<>]/g, '') : value),
+  
+  body('tags')
+    .optional()
+    .isArray({ max: 10 })
+    .withMessage('Tags must be an array with maximum 10 items')
+    .custom((tags) => {
+      if (tags && tags.some(tag => typeof tag !== 'string' || tag.trim().length === 0 || tag.trim().length > 50)) {
+        throw new Error('Each tag must be a non-empty string with maximum 50 characters');
+      }
+      return true;
+    })
+];
+
+/**
  * Validation rules for user profile update
  */
 const validateUserProfileUpdate = [
@@ -326,6 +422,9 @@ module.exports = {
   validateUserLogin,
   validateUserProfileUpdate,
   validateRoleUpdate,
+  validateNote,
+  validateTask,
+  validateFileMetadata,
   handleValidationErrors,
   customValidators,
   validateEmail,

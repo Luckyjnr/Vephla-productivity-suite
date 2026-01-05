@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
+const { validateNote, handleValidationErrors } = require('../utils/validators');
 const {
   createNote,
   getNotes,
@@ -26,10 +27,10 @@ router.get('/search', searchNotes);
 router.delete('/bulk', bulkDeleteNotes);
 
 // CRUD operations
-router.post('/', createNote);
+router.post('/', validateNote, handleValidationErrors, createNote);
 router.get('/', getNotes);
 router.get('/:id', getNoteById);
-router.put('/:id', updateNote);
+router.put('/:id', validateNote, handleValidationErrors, updateNote);
 router.delete('/:id', deleteNote);
 
 module.exports = router;

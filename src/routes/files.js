@@ -1,6 +1,7 @@
 const express = require('express');
 const { authenticateToken } = require('../middleware/auth');
 const { upload, handleMulterError } = require('../config/multer');
+const { validateFileMetadata, handleValidationErrors } = require('../utils/validators');
 const {
   uploadFiles,
   getFiles,
@@ -43,7 +44,7 @@ router.post('/', upload.array('files', 10), handleMulterError, uploadFiles);
 // CRUD operations
 router.get('/', getFiles);
 router.get('/:id', getFileById);
-router.put('/:id', updateFileMetadata);
+router.put('/:id', validateFileMetadata, handleValidationErrors, updateFileMetadata);
 router.delete('/:id', deleteFile);
 
 // File download
