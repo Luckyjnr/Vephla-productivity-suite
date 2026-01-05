@@ -87,121 +87,235 @@ const resolvers = {
     notes: async (parent, { first = 20, after, tags, search }, { user }) => {
       requireAuth(user);
       
+      // Validate pagination parameters
+      if (first < 1 || first > 100) {
+        throw new UserInputError('First parameter must be between 1 and 100');
+      }
+
       const options = {
         page: 1,
         limit: first,
-        tags,
-        search
+        tags: tags || [],
+        search: search || ''
       };
 
       if (after) {
-        const decodedCursor = Buffer.from(after, 'base64').toString('ascii');
-        // In a real implementation, you'd use the cursor for pagination
-        // For now, we'll use basic pagination
+        const decodedCursor = decodeCursor(after);
+        // Use cursor for pagination offset
+        options.afterId = decodedCursor;
       }
 
-      const result = await noteService.getUserNotes(user._id, options);
-      return createConnection(result.notes, result.total, first, after);
+      try {
+        const result = await noteService.getUserNotes(user._id, options);
+        return createConnection(result.notes, result.total, first, after);
+      } catch (error) {
+        console.error('Error fetching notes:', error);
+        throw new Error('Failed to fetch notes');
+      }
     },
 
     note: async (parent, { id }, { user }) => {
       requireAuth(user);
+      validateObjectId(id, 'Note ID');
       
-      const note = await Note.findOne({ _id: id, owner: user._id }).populate('owner');
-      if (!note) {
-        throw new UserInputError('Note not found or access denied');
+      try {
+        const note = await Note.findOne({ _id: id, owner: user._id }).populate('owner');
+        if (!note) {
+          throw new UserInputError('Note not found or access denied');
+        }
+        return note;
+      } catch (error) {
+        if (error instanceof UserInputError) throw error;
+        console.error('Error fetching note:', error);
+        throw new Error('Failed to fetch note');
       }
-      
-      return note;
     },
 
     // Task queries
     tasks: async (parent, { first = 20, after, status, priority }, { user }) => {
       requireAuth(user);
       
+      // Validate pagination parameters
+      if (first < 1 || first > 100) {
+        throw new UserInputError('First parameter must be between 1 and 100');
+      }
+
+      // Validate enum values
+      const validStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+      
+      if (status && !validStatuses.includes(status)) {
+        throw new UserInputError(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+      }
+      
+      if (priority && !validPriorities.includes(priority)) {
+        throw new UserInputError(`Invalid priority. Must be one of: ${validPriorities.join(', ')}`);
+      }
+
       const options = {
         page: 1,
         limit: first,
-        status,
-        priority
+        status: status || null,
+        priority: priority || null
       };
 
-      const result = await taskService.getUserTasks(user._id, options);
-      return createConnection(result.tasks, result.total, first, after);
+      if (after) {
+        const decodedCursor = decodeCursor(after);
+        options.afterId = decodedCursor;
+      }
+
+      try {
+        const result = await taskService.getUserTasks(user._id, options);
+        return createConnection(result.tasks, result.total, first, after);
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+        throw new Error('Failed to fetch tasks');
+      }
     },
 
     task: async (parent, { id }, { user }) => {
       requireAuth(user);
+      validateObjectId(id, 'Task ID');
       
-      const task = await Task.findOne({ _id: id, owner: user._id }).populate('owner');
-      if (!task) {
-        throw new UserInputError('Task not found or access denied');
+      try {
+        const task = await Task.findOne({ _id: id, owner: user._id }).populate('owner');
+        if (!task) {
+          throw new UserInputError('Task not found or access denied');
+        }
+        return task;
+      } catch (error) {
+        if (error instanceof UserInputError) throw error;
+        console.error('Error fetching task:', error);
+        throw new Error('Failed to fetch task');
       }
-      
-      return task;
     },
 
     // File queries
     files: async (parent, { first = 20, after }, { user }) => {
       requireAuth(user);
       
+      // Validate pagination parameters
+      if (first < 1 || first > 100) {
+        throw new UserInputError('First parameter must be between 1 and 100');
+      }
+
       const options = {
         page: 1,
         limit: first
       };
 
-      const result = await fileService.getUserFiles(user._id, options);
-      return createConnection(result.files, result.total, first, after);
+      if (after) {
+        const decodedCursor = decodeCursor(after);
+        options.afterId = decodedCursor;
+      }
+
+      try {
+        const result = await fileService.getUserFiles(user._id, options);
+        return createConnection(result.files, result.total, first, after);
+      } catch (error) {
+        console.error('Error fetching files:', error);
+        throw new Error('Failed to fetch files');
+      }
     },
 
     file: async (parent, { id }, { user }) => {
       requireAuth(user);
+      validateObjectId(id, 'File ID');
       
-      const file = await File.findOne({ _id: id, owner: user._id }).populate('owner');
-      if (!file) {
-        throw new UserInputError('File not found or access denied');
+      try {
+        const file = await File.findOne({ _id: id, owner: user._id }).populate('owner');
+        if (!file) {
+          throw new UserInputError('File not found or access denied');
+        }
+        return file;
+      } catch (error) {
+        if (error instanceof UserInputError) throw error;
+        console.error('Error fetching file:', error);
+        throw new Error('Failed to fetch file');
       }
-      
-      return file;
     },
 
     // Notification queries
     notifications: async (parent, { first = 20, after, unreadOnly }, { user }) => {
       requireAuth(user);
       
+      // Validate pagination parameters
+      if (first < 1 || first > 100) {
+        throw new UserInputError('First parameter must be between 1 and 100');
+      }
+
       const options = {
         page: 1,
         limit: first,
         unreadOnly: unreadOnly || false
       };
 
-      const result = await notificationService.getUserNotifications(user._id, options);
-      return createConnection(result.notifications, result.pagination.total, first, after);
+      if (after) {
+        const decodedCursor = decodeCursor(after);
+        options.afterId = decodedCursor;
+      }
+
+      try {
+        const result = await notificationService.getUserNotifications(user._id, options);
+        return createConnection(result.notifications, result.pagination.total, first, after);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        throw new Error('Failed to fetch notifications');
+      }
     },
 
     // Chat queries
     chatHistory: async (parent, { room, limit = 50, before }, { user }) => {
       requireAuth(user);
       
+      // Validate parameters
+      if (!room || room.trim().length === 0) {
+        throw new UserInputError('Room name is required');
+      }
+      
+      if (limit < 1 || limit > 200) {
+        throw new UserInputError('Limit must be between 1 and 200');
+      }
+
       const options = { limit };
       if (before) {
         options.before = before;
       }
 
-      const result = await chatService.getChatHistory(room, options);
-      return result.messages;
+      try {
+        const result = await chatService.getChatHistory(room.trim(), options);
+        return result.messages;
+      } catch (error) {
+        console.error('Error fetching chat history:', error);
+        throw new Error('Failed to fetch chat history');
+      }
     },
 
     // Admin queries
     users: async (parent, { first = 20, after }, { user }) => {
       requireAdmin(user);
       
+      // Validate pagination parameters
+      if (first < 1 || first > 100) {
+        throw new UserInputError('First parameter must be between 1 and 100');
+      }
+
       const options = {
         page: 1,
         limit: first
       };
 
-      return await adminService.getAllUsers(options);
+      if (after) {
+        const decodedCursor = decodeCursor(after);
+        options.afterId = decodedCursor;
+      }
+
+      try {
+        return await adminService.getAllUsers(options);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        throw new Error('Failed to fetch users');
+      }
     }
   },
 
