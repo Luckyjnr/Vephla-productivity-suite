@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const http = require('http');
 require('dotenv').config();
 
@@ -46,6 +47,39 @@ app.use(helmet({
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000'
 }));
+
+// Rate limiting configuration
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many requests from this IP, please try again later.',
+      timestamp: new Date().toISOString()
+    }
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Stricter rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 auth requests per windowMs
+  message: {
+    error: {
+      code: 'AUTH_RATE_LIMIT_EXCEEDED',
+      message: 'Too many authentication attempts, please try again later.',
+      timestamp: new Date().toISOString()
+    }
+  },
+  skipSuccessfulRequests: true, // Don't count successful requests
+});
+
+// Apply general rate limiting to all routes
+app.use(limiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -103,7 +137,7 @@ const startGraphQLServer = async () => {
 };
 
 // Routes
-app.use('/auth', authRoutes);
+app.use('/auth', authLimiter, authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/notes', noteRoutes);
 app.use('/tasks', taskRoutes);
