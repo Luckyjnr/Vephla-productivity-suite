@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const connectDB = require('./config/database');
 const { initializeSocket } = require('./config/socket');
+const { createGraphQLServer } = require('./graphql/server');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const noteRoutes = require('./routes/notes');
@@ -57,6 +58,32 @@ app.use((req, res, next) => {
 // Serve static files for the test client
 app.use(express.static('public'));
 
+// Initialize GraphQL Server
+const graphqlServer = createGraphQLServer();
+
+// Apply GraphQL middleware to Express app
+const startGraphQLServer = async () => {
+  await graphqlServer.start();
+  graphqlServer.applyMiddleware({ 
+    app, 
+    path: '/graphql',
+    cors: {
+      origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+      credentials: true
+    }
+  });
+  
+  console.log(`🚀 GraphQL Server ready at http://localhost:${PORT}${graphqlServer.graphqlPath}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`🎮 GraphQL Playground available at http://localhost:${PORT}${graphqlServer.graphqlPath}`);
+  }
+};
+
+// Start GraphQL server
+startGraphQLServer().catch(error => {
+  console.error('Failed to start GraphQL server:', error);
+});
+
 // Routes
 app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
@@ -101,12 +128,21 @@ app.use((err, req, res, next) => {
 
 // Start server
 if (require.main === module) {
-  server.listen(PORT, () => {
-    console.log(`🚀 Productivity Suite API running on port ${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/health`);
-    console.log(`🔌 Socket.io server initialized`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  });
+  const startServer = async () => {
+    try {
+      server.listen(PORT, () => {
+        console.log(`🚀 Productivity Suite API running on port ${PORT}`);
+        console.log(`📊 Health check: http://localhost:${PORT}/health`);
+        console.log(`🔌 Socket.io server initialized`);
+        console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      });
+    } catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  };
+
+  startServer();
 }
 
 module.exports = app;
