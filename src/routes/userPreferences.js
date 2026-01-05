@@ -10,6 +10,9 @@ router.use(authenticateToken);
 // User preference routes
 router.get('/', notificationController.getAllPreferences);
 
+// Migration endpoint
+router.post('/migrate', notificationController.migrateUserPreferences);
+
 // Notification preferences
 router.get('/notifications', notificationController.getNotificationPreferences);
 router.put('/notifications', notificationController.updateNotificationPreferences);

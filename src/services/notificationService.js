@@ -14,27 +14,39 @@ class NotificationService {
       // Validate required fields
       const { userId, type, title, message } = notificationData;
       
+      console.log('🔔 NotificationService.createNotification called with:', {
+        userId,
+        type,
+        title: title?.substring(0, 50) + '...'
+      });
+      
       if (!userId || !type || !title || !message) {
+        console.error('❌ Missing required fields:', { userId: !!userId, type: !!type, title: !!title, message: !!message });
         throw new Error('MISSING_REQUIRED_FIELDS');
       }
 
       // Check if user should receive this type of notification
+      console.log('🔍 Checking user preferences for notification type:', type);
       const shouldReceive = await userPreferenceService.shouldReceiveNotification(userId, type);
+      console.log('📋 User preference check result:', shouldReceive);
       
       if (!shouldReceive) {
-        console.log(`User ${userId} has disabled ${type} notifications`);
+        console.log(`⚠️ User ${userId} has disabled ${type} notifications`);
         return null; // Don't create notification if user has disabled it
       }
 
       // Create notification in database
+      console.log('💾 Creating notification in database...');
       const notification = await notificationRepository.createNotification(notificationData);
+      console.log('✅ Notification created in database:', notification._id);
 
       // Try to send real-time notification
+      console.log('📡 Attempting to send real-time notification...');
       await this.sendRealTimeNotification(notification);
 
       return notification;
     } catch (error) {
-      console.error('Error creating notification:', error);
+      console.error('❌ Error creating notification:', error);
       throw error;
     }
   }

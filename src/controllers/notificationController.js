@@ -8,7 +8,7 @@ class NotificationController {
    */
   async getNotifications(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const {
         page = 1,
         limit = 20,
@@ -58,7 +58,7 @@ class NotificationController {
    */
   async getUnreadCount(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const count = await notificationService.getUnreadCount(userId);
 
       res.json({
@@ -87,7 +87,7 @@ class NotificationController {
    */
   async markAsRead(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const notificationId = req.params.id;
 
       let result;
@@ -139,7 +139,7 @@ class NotificationController {
    */
   async deleteNotifications(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const notificationId = req.params.id;
 
       let result;
@@ -195,7 +195,7 @@ class NotificationController {
    */
   async getNotificationStats(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const stats = await notificationService.getNotificationStats(userId);
 
       res.json({
@@ -221,7 +221,7 @@ class NotificationController {
    */
   async getNotificationPreferences(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const preferences = await userPreferenceService.getNotificationPreferences(userId);
 
       res.json({
@@ -259,7 +259,7 @@ class NotificationController {
    */
   async updateNotificationPreferences(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const preferences = req.body;
 
       // Validate request body
@@ -314,7 +314,7 @@ class NotificationController {
    */
   async getAllPreferences(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const preferences = await userPreferenceService.getAllPreferences(userId);
 
       res.json({
@@ -352,7 +352,7 @@ class NotificationController {
    */
   async updateThemePreference(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const { theme } = req.body;
 
       if (!theme || !['light', 'dark'].includes(theme)) {
@@ -396,12 +396,67 @@ class NotificationController {
   }
 
   /**
-   * Reset notification preferences to defaults
-   * POST /user/preferences/notifications/reset
+   * Test endpoint - Create a test notification
+   * POST /notifications/test
    */
+  async createTestNotification(req, res) {
+    try {
+      // Debug the user object
+      console.log('🔍 req.user object:', req.user);
+      
+      const userId = req.user.userId || req.user.id || req.user._id;
+      console.log('👤 Extracted userId:', userId);
+      
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'USER_ID_MISSING',
+            message: 'User ID not found in token',
+            debug: { user: req.user }
+          }
+        });
+      }
+      
+      console.log('🧪 Creating test notification for user:', userId);
+      
+      const notification = await notificationService.createNotification({
+        userId,
+        type: 'system_alert',
+        title: 'Test Notification',
+        message: 'This is a test notification to verify the system is working',
+        priority: 'medium',
+        data: { test: true }
+      });
+
+      res.json({
+        success: true,
+        message: 'Test notification created successfully',
+        data: {
+          notification: notification ? {
+            id: notification._id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message
+          } : null
+        }
+      });
+    } catch (error) {
+      console.error('Error creating test notification:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to create test notification',
+          details: error.message
+        }
+      });
+    }
+  }
   async resetNotificationPreferences(req, res) {
     try {
-      const userId = req.user.id;
+      const userId = req.user.userId || req.user.id || req.user._id;
       const preferences = await userPreferenceService.resetNotificationPreferences(userId);
 
       res.json({
@@ -429,6 +484,72 @@ class NotificationController {
         error: {
           code: 'INTERNAL_ERROR',
           message: 'Failed to reset notification preferences'
+        }
+      });
+    }
+  }
+
+  /**
+   * Migration endpoint - Fix user preferences structure
+   * POST /user/preferences/migrate
+   */
+  async migrateUserPreferences(req, res) {
+    try {
+      const userId = req.user.userId || req.user.id || req.user._id;
+      
+      console.log('🔄 Migrating user preferences for user:', userId);
+      
+      const User = require('../models/User');
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: { code: 'USER_NOT_FOUND', message: 'User not found' }
+        });
+      }
+
+      // Force reset preferences to correct structure
+      user.preferences = {
+        notifications: {
+          enabled: true,
+          types: {
+            task_assigned: true,
+            task_completed: true,
+            task_due_soon: true,
+            note_shared: true,
+            note_updated: false,
+            file_uploaded: true,
+            file_shared: true,
+            chat_mention: true,
+            system_alert: true
+          },
+          delivery: {
+            realtime: true,
+            email: false
+          }
+        },
+        theme: user.preferences?.theme || 'light'
+      };
+
+      await user.save();
+      console.log('✅ User preferences migrated successfully');
+
+      res.json({
+        success: true,
+        message: 'User preferences migrated successfully',
+        data: {
+          preferences: user.preferences
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error migrating user preferences:', error);
+      
+      res.status(500).json({
+        success: false,
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to migrate user preferences',
+          details: error.message
         }
       });
     }

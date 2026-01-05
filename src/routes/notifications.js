@@ -12,6 +12,9 @@ router.get('/', notificationController.getNotifications);
 router.get('/unread-count', notificationController.getUnreadCount);
 router.get('/stats', notificationController.getNotificationStats);
 
+// Test endpoint
+router.post('/test', notificationController.createTestNotification);
+
 // Mark notifications as read
 router.put('/read', notificationController.markAsRead); // Mark all as read
 router.put('/:id/read', notificationController.markAsRead); // Mark specific as read

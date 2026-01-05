@@ -59,13 +59,18 @@ class TaskService {
     // Send notification if task is assigned to someone (future feature)
     // For now, we'll send a notification to the task creator
     try {
-      await notificationService.createTaskNotification(
+      console.log('🔔 Attempting to create task notification for user:', userId);
+      console.log('📝 Task created:', { id: createdTask._id, title: createdTask.title });
+      
+      const notification = await notificationService.createTaskNotification(
         createdTask,
         'task_assigned',
         userId
       );
+      
+      console.log('✅ Task notification created:', notification ? notification._id : 'null');
     } catch (notificationError) {
-      console.error('Failed to send task creation notification:', notificationError);
+      console.error('❌ Failed to send task creation notification:', notificationError);
       // Don't fail the task creation if notification fails
     }
     
@@ -237,13 +242,19 @@ class TaskService {
     // Send notification if task status changed to completed
     if (status && existingTask.status !== 'completed' && status === 'completed') {
       try {
-        await notificationService.createTaskNotification(
+        console.log('🎉 Task completed! Attempting to create completion notification');
+        console.log('📝 Task completed:', { id: updatedTask._id, title: updatedTask.title });
+        console.log('👤 User ID:', userId);
+        
+        const notification = await notificationService.createTaskNotification(
           updatedTask,
           'task_completed',
           userId
         );
+        
+        console.log('✅ Task completion notification created:', notification ? notification._id : 'null');
       } catch (notificationError) {
-        console.error('Failed to send task completion notification:', notificationError);
+        console.error('❌ Failed to send task completion notification:', notificationError);
         // Don't fail the update if notification fails
       }
     }

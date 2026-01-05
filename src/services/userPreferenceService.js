@@ -6,15 +6,79 @@ class UserPreferenceService {
    */
   async getNotificationPreferences(userId) {
     try {
+      console.log('🔍 Getting notification preferences for user:', userId);
+      
       const user = await User.findById(userId).select('preferences.notifications');
+      console.log('👤 User found:', !!user);
       
       if (!user) {
-        throw new Error('USER_NOT_FOUND');
+        console.log('❌ User not found, creating default preferences');
+        // User not found, let's try to create default preferences
+        const userExists = await User.findById(userId);
+        if (!userExists) {
+          throw new Error('USER_NOT_FOUND');
+        }
+        
+        // Initialize default preferences
+        userExists.preferences = userExists.preferences || {};
+        userExists.preferences.notifications = {
+          enabled: true,
+          types: {
+            task_assigned: true,
+            task_completed: true,
+            task_due_soon: true,
+            note_shared: true,
+            note_updated: false,
+            file_uploaded: true,
+            file_shared: true,
+            chat_mention: true,
+            system_alert: true
+          },
+          delivery: {
+            realtime: true,
+            email: false
+          }
+        };
+        
+        await userExists.save();
+        console.log('✅ Default preferences created for user');
+        return userExists.preferences.notifications;
       }
 
+      // Check if preferences exist, if not initialize them
+      if (!user.preferences || !user.preferences.notifications) {
+        console.log('⚠️ Preferences not initialized, creating defaults');
+        
+        const fullUser = await User.findById(userId);
+        fullUser.preferences = fullUser.preferences || {};
+        fullUser.preferences.notifications = {
+          enabled: true,
+          types: {
+            task_assigned: true,
+            task_completed: true,
+            task_due_soon: true,
+            note_shared: true,
+            note_updated: false,
+            file_uploaded: true,
+            file_shared: true,
+            chat_mention: true,
+            system_alert: true
+          },
+          delivery: {
+            realtime: true,
+            email: false
+          }
+        };
+        
+        await fullUser.save();
+        console.log('✅ Default preferences initialized');
+        return fullUser.preferences.notifications;
+      }
+
+      console.log('✅ Preferences found:', JSON.stringify(user.preferences.notifications, null, 2));
       return user.preferences.notifications;
     } catch (error) {
-      console.error('Error getting notification preferences:', error);
+      console.error('❌ Error getting notification preferences:', error);
       throw error;
     }
   }
@@ -53,23 +117,31 @@ class UserPreferenceService {
    */
   async shouldReceiveNotification(userId, notificationType) {
     try {
+      console.log('🔍 UserPreferenceService.shouldReceiveNotification called:', { userId, notificationType });
+      
       const preferences = await this.getNotificationPreferences(userId);
+      console.log('📋 User notification preferences:', JSON.stringify(preferences, null, 2));
       
       // Check if notifications are globally enabled
       if (!preferences.enabled) {
+        console.log('⚠️ Notifications globally disabled for user');
         return false;
       }
 
       // Check if specific notification type is enabled
       if (preferences.types && preferences.types[notificationType] !== undefined) {
-        return preferences.types[notificationType];
+        const result = preferences.types[notificationType];
+        console.log(`📝 Specific preference for ${notificationType}:`, result);
+        return result;
       }
 
       // Default to true if preference not set
+      console.log('✅ No specific preference found, defaulting to true');
       return true;
     } catch (error) {
-      console.error('Error checking notification preference:', error);
+      console.error('❌ Error checking notification preference:', error);
       // Default to true on error to ensure important notifications are sent
+      console.log('⚠️ Error occurred, defaulting to true for safety');
       return true;
     }
   }
