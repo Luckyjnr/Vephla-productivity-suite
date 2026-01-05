@@ -10,6 +10,7 @@ const connectDB = require('./config/database');
 const { initializeSocket } = require('./config/socket');
 const { createGraphQLServer } = require('./graphql/server');
 const { sanitizeInput, setSecurityHeaders, validateContentType } = require('./middleware/sanitization');
+const { swaggerUi, specs } = require('./config/swagger');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const noteRoutes = require('./routes/notes');
@@ -133,6 +134,22 @@ app.use((req, res, next) => {
 // Serve static files for the test client
 app.use(express.static('public'));
 
+// Swagger API Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Productivity Suite API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    docExpansion: 'none',
+    filter: true,
+    showExtensions: true,
+    showCommonExtensions: true,
+    tryItOutEnabled: true
+  }
+}));
+
 // Initialize GraphQL Server
 const graphqlServer = createGraphQLServer();
 
@@ -193,12 +210,50 @@ app.use('/notifications', notificationRoutes);
 app.use('/user/preferences', userPreferenceRoutes);
 
 // Basic health check endpoint
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Health check endpoint
+ *     tags: [System]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: API is healthy and running
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: OK
+ *                 message:
+ *                   type: string
+ *                   example: Productivity Suite API is running
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: 2024-01-01T00:00:00.000Z
+ *                 version:
+ *                   type: string
+ *                   example: 1.0.0
+ *                 uptime:
+ *                   type: number
+ *                   description: Server uptime in seconds
+ *                   example: 3600
+ *                 environment:
+ *                   type: string
+ *                   example: development
+ */
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     message: 'Productivity Suite API is running',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
