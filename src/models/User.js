@@ -26,8 +26,25 @@ const userSchema = new mongoose.Schema({
   },
   preferences: {
     notifications: {
-      type: Boolean,
-      default: true
+      enabled: {
+        type: Boolean,
+        default: true
+      },
+      types: {
+        task_assigned: { type: Boolean, default: true },
+        task_completed: { type: Boolean, default: true },
+        task_due_soon: { type: Boolean, default: true },
+        note_shared: { type: Boolean, default: true },
+        note_updated: { type: Boolean, default: false },
+        file_uploaded: { type: Boolean, default: true },
+        file_shared: { type: Boolean, default: true },
+        chat_mention: { type: Boolean, default: true },
+        system_alert: { type: Boolean, default: true }
+      },
+      delivery: {
+        realtime: { type: Boolean, default: true },
+        email: { type: Boolean, default: false }
+      }
     },
     theme: {
       type: String,

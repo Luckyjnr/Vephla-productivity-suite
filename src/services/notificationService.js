@@ -1,4 +1,5 @@
 const notificationRepository = require('../repositories/notificationRepository');
+const userPreferenceService = require('./userPreferenceService');
 
 class NotificationService {
   constructor() {
@@ -15,6 +16,14 @@ class NotificationService {
       
       if (!userId || !type || !title || !message) {
         throw new Error('MISSING_REQUIRED_FIELDS');
+      }
+
+      // Check if user should receive this type of notification
+      const shouldReceive = await userPreferenceService.shouldReceiveNotification(userId, type);
+      
+      if (!shouldReceive) {
+        console.log(`User ${userId} has disabled ${type} notifications`);
+        return null; // Don't create notification if user has disabled it
       }
 
       // Create notification in database
@@ -35,6 +44,14 @@ class NotificationService {
    */
   async sendRealTimeNotification(notification) {
     try {
+      // Check if user wants real-time notifications
+      const deliveryPrefs = await userPreferenceService.getDeliveryPreferences(notification.userId);
+      
+      if (!deliveryPrefs.realtime) {
+        console.log(`User ${notification.userId} has disabled real-time notifications`);
+        return;
+      }
+
       // Get Socket.io instance (will be injected later)
       const io = this.getSocketInstance();
       

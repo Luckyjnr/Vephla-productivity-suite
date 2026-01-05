@@ -1,4 +1,5 @@
 const noteRepository = require('../repositories/noteRepository');
+const notificationService = require('./notificationService');
 const { 
   validateNoteTitle, 
   validateNoteContent, 
@@ -44,6 +45,20 @@ class NoteService {
     };
 
     const createdNote = await noteRepository.create(noteToCreate);
+    
+    // Send notification for note creation (optional, could be disabled by default)
+    if (!isPrivate) {
+      try {
+        await notificationService.createNoteNotification(
+          createdNote,
+          'note_shared',
+          userId
+        );
+      } catch (notificationError) {
+        console.error('Failed to send note creation notification:', notificationError);
+        // Don't fail the note creation if notification fails
+      }
+    }
     
     return {
       message: 'Note created successfully',
@@ -179,6 +194,20 @@ class NoteService {
 
     // Update note
     const updatedNote = await noteRepository.updateByIdAndUserId(noteId, userId, updateFields);
+
+    // Send notification if note was updated and is not private
+    if (!updatedNote.isPrivate && (title !== undefined || content !== undefined)) {
+      try {
+        await notificationService.createNoteNotification(
+          updatedNote,
+          'note_updated',
+          userId
+        );
+      } catch (notificationError) {
+        console.error('Failed to send note update notification:', notificationError);
+        // Don't fail the update if notification fails
+      }
+    }
 
     return {
       message: 'Note updated successfully',

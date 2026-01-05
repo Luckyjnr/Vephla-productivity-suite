@@ -1,4 +1,5 @@
 const fileRepository = require('../repositories/fileRepository');
+const notificationService = require('./notificationService');
 const { 
   validateFileDescription, 
   validateFileTags, 
@@ -73,6 +74,18 @@ class FileService {
 
         const createdFile = await fileRepository.create(fileData);
         uploadedFiles.push(this._formatFileResponse(createdFile));
+
+        // Send notification for file upload
+        try {
+          await notificationService.createFileNotification(
+            createdFile,
+            'file_uploaded',
+            userId
+          );
+        } catch (notificationError) {
+          console.error('Failed to send file upload notification:', notificationError);
+          // Don't fail the upload if notification fails
+        }
 
       } catch (error) {
         // Clean up the file on error

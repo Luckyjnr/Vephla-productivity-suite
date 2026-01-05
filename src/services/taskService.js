@@ -1,4 +1,5 @@
 const taskRepository = require('../repositories/taskRepository');
+const notificationService = require('./notificationService');
 const { 
   validateTaskTitle, 
   validateTaskDescription, 
@@ -54,6 +55,19 @@ class TaskService {
     };
 
     const createdTask = await taskRepository.create(taskToCreate);
+    
+    // Send notification if task is assigned to someone (future feature)
+    // For now, we'll send a notification to the task creator
+    try {
+      await notificationService.createTaskNotification(
+        createdTask,
+        'task_assigned',
+        userId
+      );
+    } catch (notificationError) {
+      console.error('Failed to send task creation notification:', notificationError);
+      // Don't fail the task creation if notification fails
+    }
     
     return {
       message: 'Task created successfully',
@@ -219,6 +233,20 @@ class TaskService {
 
     // Update task
     const updatedTask = await taskRepository.updateByIdAndUserId(taskId, userId, updateFields);
+
+    // Send notification if task status changed to completed
+    if (status && existingTask.status !== 'completed' && status === 'completed') {
+      try {
+        await notificationService.createTaskNotification(
+          updatedTask,
+          'task_completed',
+          userId
+        );
+      } catch (notificationError) {
+        console.error('Failed to send task completion notification:', notificationError);
+        // Don't fail the update if notification fails
+      }
+    }
 
     return {
       message: 'Task updated successfully',
