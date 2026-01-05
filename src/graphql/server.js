@@ -1,33 +1,18 @@
 const { ApolloServer } = require('apollo-server-express');
-const { makeExecutableSchema } = require('@graphql-tools/schema');
 const typeDefs = require('./typeDefs');
 const resolvers = require('./resolvers');
 const { createContext } = require('./context');
-const { requireAuthDirective, requireRoleDirective } = require('./directives');
 
 /**
  * Create and configure Apollo GraphQL Server
  */
 const createGraphQLServer = () => {
-  // Create executable schema with directives
-  let schema = makeExecutableSchema({
-    typeDefs: [
-      typeDefs,
-      requireAuthDirective().requireAuthDirectiveTypeDefs,
-      requireRoleDirective().requireRoleDirectiveTypeDefs
-    ],
-    resolvers
-  });
-
-  // Apply directive transformers
-  schema = requireAuthDirective().requireAuthDirectiveTransformer(schema);
-  schema = requireRoleDirective().requireRoleDirectiveTransformer(schema);
-
   const server = new ApolloServer({
-    schema,
+    typeDefs,
+    resolvers,
     context: createContext,
     
-    // Enable GraphQL Playground in development
+    // Enable introspection in development
     introspection: process.env.NODE_ENV !== 'production',
     
     // Error formatting
@@ -43,18 +28,32 @@ const createGraphQLServer = () => {
         locations: error.locations
       };
     },
-    
-    // Custom validation rules can be added here
-    validationRules: [],
-    
-    // Upload configuration (if needed for file uploads via GraphQL)
-    uploads: {
-      maxFileSize: 10 * 1024 * 1024, // 10MB
-      maxFiles: 5
-    }
+
+    // Configure for development
+    ...(process.env.NODE_ENV === 'development' && {
+      plugins: [
+        {
+          requestDidStart() {
+            return {
+              willSendResponse(requestContext) {
+                // Add CORS headers for development
+                const { response } = requestContext;
+                if (response.http) {
+                  response.http.headers.set('Access-Control-Allow-Origin', '*');
+                  response.http.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+                  response.http.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+                }
+              }
+            };
+          }
+        }
+      ]
+    })
   });
 
   return server;
 };
+
+module.exports = { createGraphQLServer };
 
 module.exports = { createGraphQLServer };

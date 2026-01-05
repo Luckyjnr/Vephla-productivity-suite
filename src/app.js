@@ -77,12 +77,30 @@ const startGraphQLServer = async () => {
   if (process.env.NODE_ENV !== 'production') {
     console.log(`🎮 GraphQL Playground available at http://localhost:${PORT}${graphqlServer.graphqlPath}`);
   }
-};
 
-// Start GraphQL server
-startGraphQLServer().catch(error => {
-  console.error('Failed to start GraphQL server:', error);
-});
+  // Add 404 handler AFTER GraphQL middleware is applied
+  app.use('*', (req, res) => {
+    res.status(404).json({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Endpoint not found',
+        timestamp: new Date().toISOString()
+      }
+    });
+  });
+
+  // Basic error handler
+  app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Something went wrong!',
+        timestamp: new Date().toISOString()
+      }
+    });
+  });
+};
 
 // Routes
 app.use('/auth', authRoutes);
@@ -103,33 +121,13 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Basic 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: {
-      code: 'NOT_FOUND',
-      message: 'Endpoint not found',
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
-// Basic error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: {
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Something went wrong!',
-      timestamp: new Date().toISOString()
-    }
-  });
-});
-
 // Start server
 if (require.main === module) {
   const startServer = async () => {
     try {
+      // Wait for GraphQL server to be ready before starting Express server
+      await startGraphQLServer();
+      
       server.listen(PORT, () => {
         console.log(`🚀 Productivity Suite API running on port ${PORT}`);
         console.log(`📊 Health check: http://localhost:${PORT}/health`);

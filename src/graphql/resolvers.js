@@ -35,6 +35,22 @@ const DateScalar = new GraphQLScalarType({
   },
 });
 
+// Helper function to decode cursor
+const decodeCursor = (cursor) => {
+  try {
+    return Buffer.from(cursor, 'base64').toString('utf-8');
+  } catch (error) {
+    throw new UserInputError('Invalid cursor format');
+  }
+};
+
+// Helper function to validate ObjectId
+const validateObjectId = (id, fieldName = 'ID') => {
+  if (!id || typeof id !== 'string' || id.length !== 24) {
+    throw new UserInputError(`Invalid ${fieldName} format`);
+  }
+};
+
 // Helper function to require authentication
 const requireAuth = (user) => {
   if (!user) {
@@ -76,6 +92,78 @@ const createConnection = (items, totalCount, first, after) => {
 const resolvers = {
   Date: DateScalar,
 
+  // Field resolvers for Note type
+  Note: {
+    owner: async (note) => {
+      console.log('🔍 Note owner resolver called with:', { noteId: note.id, userId: note.userId });
+      
+      // If userId is already a populated User object, return it
+      if (note.userId && typeof note.userId === 'object' && note.userId.email) {
+        console.log('✅ UserId already populated as User object:', { email: note.userId.email });
+        return note.userId;
+      }
+      
+      // Otherwise, fetch the user by ID (whether it's ObjectId or string)
+      if (note.userId) {
+        console.log('🔍 Fetching user by ID:', note.userId);
+        const user = await User.findById(note.userId).select('-passwordHash');
+        console.log('👤 User found:', user ? { id: user._id, email: user.email, name: user.name } : 'null');
+        return user;
+      }
+      
+      console.log('❌ No userId found in note');
+      return null;
+    }
+  },
+
+  // Field resolvers for Task type
+  Task: {
+    owner: async (task) => {
+      console.log('🔍 Task owner resolver called with:', { taskId: task.id, userId: task.userId });
+      
+      // If userId is already a populated User object, return it
+      if (task.userId && typeof task.userId === 'object' && task.userId.email) {
+        console.log('✅ UserId already populated as User object:', { email: task.userId.email });
+        return task.userId;
+      }
+      
+      // Otherwise, fetch the user by ID (whether it's ObjectId or string)
+      if (task.userId) {
+        console.log('🔍 Fetching user by ID:', task.userId);
+        const user = await User.findById(task.userId).select('-passwordHash');
+        console.log('👤 User found:', user ? { id: user._id, email: user.email, name: user.name } : 'null');
+        return user;
+      }
+      
+      console.log('❌ No userId found in task');
+      return null;
+    }
+  },
+
+  // Field resolvers for File type
+  File: {
+    owner: async (file) => {
+      console.log('🔍 File owner resolver called with:', { fileId: file.id, userId: file.userId });
+      
+      // If userId is already a populated User object, return it
+      if (file.userId && typeof file.userId === 'object' && file.userId.email) {
+        console.log('✅ UserId already populated as User object:', { email: file.userId.email });
+        return file.userId;
+      }
+      
+      // Otherwise, fetch the user by ID (whether it's ObjectId or string)
+      if (file.userId) {
+        console.log('🔍 Fetching user by ID:', file.userId);
+        const user = await User.findById(file.userId).select('-passwordHash');
+        console.log('👤 User found:', user ? { id: user._id, email: user.email, name: user.name } : 'null');
+        return user;
+      }
+      
+      console.log('❌ No userId found in file');
+      return null;
+    }
+  },
+
   Query: {
     // User queries
     me: async (parent, args, { user }) => {
@@ -106,8 +194,8 @@ const resolvers = {
       }
 
       try {
-        const result = await noteService.getUserNotes(user._id, options);
-        return createConnection(result.notes, result.total, first, after);
+        const result = await noteService.getNotes(user._id, options);
+        return createConnection(result.notes, result.pagination?.total || 0, first, after);
       } catch (error) {
         console.error('Error fetching notes:', error);
         throw new Error('Failed to fetch notes');
@@ -141,8 +229,8 @@ const resolvers = {
       }
 
       // Validate enum values
-      const validStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+      const validStatuses = ['pending', 'in_progress', 'completed'];
+      const validPriorities = ['low', 'medium', 'high'];
       
       if (status && !validStatuses.includes(status)) {
         throw new UserInputError(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
@@ -165,8 +253,8 @@ const resolvers = {
       }
 
       try {
-        const result = await taskService.getUserTasks(user._id, options);
-        return createConnection(result.tasks, result.total, first, after);
+        const result = await taskService.getTasks(user._id, options);
+        return createConnection(result.tasks, result.pagination?.total || 0, first, after);
       } catch (error) {
         console.error('Error fetching tasks:', error);
         throw new Error('Failed to fetch tasks');
@@ -210,8 +298,8 @@ const resolvers = {
       }
 
       try {
-        const result = await fileService.getUserFiles(user._id, options);
-        return createConnection(result.files, result.total, first, after);
+        const result = await fileService.getFiles(user._id, options);
+        return createConnection(result.files, result.pagination?.total || 0, first, after);
       } catch (error) {
         console.error('Error fetching files:', error);
         throw new Error('Failed to fetch files');
@@ -323,12 +411,14 @@ const resolvers = {
     // Note mutations
     createNote: async (parent, { input }, { user }) => {
       requireAuth(user);
-      return await noteService.createNote(user._id, input);
+      const result = await noteService.createNote(user._id, input);
+      return result.note;
     },
 
     updateNote: async (parent, { id, input }, { user }) => {
       requireAuth(user);
-      return await noteService.updateNote(id, user._id, input);
+      const result = await noteService.updateNote(id, user._id, input);
+      return result.note;
     },
 
     deleteNote: async (parent, { id }, { user }) => {
@@ -340,22 +430,25 @@ const resolvers = {
     // Task mutations
     createTask: async (parent, { input }, { user }) => {
       requireAuth(user);
-      return await taskService.createTask(user._id, input);
+      const result = await taskService.createTask(user._id, input);
+      return result.task;
     },
 
     updateTask: async (parent, { id, input }, { user }) => {
       requireAuth(user);
-      return await taskService.updateTask(id, user._id, input);
+      const result = await taskService.updateTask(user._id, id, input);
+      return result.task;
     },
 
     completeTask: async (parent, { id }, { user }) => {
       requireAuth(user);
-      return await taskService.completeTask(id, user._id);
+      const result = await taskService.completeTask(user._id, id);
+      return result.task;
     },
 
     deleteTask: async (parent, { id }, { user }) => {
       requireAuth(user);
-      await taskService.deleteTask(id, user._id);
+      await taskService.deleteTask(user._id, id);
       return true;
     },
 

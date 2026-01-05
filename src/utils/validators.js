@@ -239,7 +239,7 @@ const validateTaskDescription = (description) => {
  * Validate task status
  */
 const validateTaskStatus = (status) => {
-  const validStatuses = ['pending', 'in-progress', 'completed'];
+  const validStatuses = ['pending', 'in_progress', 'completed'];
   return validStatuses.includes(status);
 };
 

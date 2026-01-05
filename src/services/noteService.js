@@ -375,6 +375,7 @@ class NoteService {
       title: note.title,
       content: note.content,
       tags: note.tags || [],
+      userId: note.userId, // Add userId for GraphQL owner field resolver
       isPrivate: note.isPrivate,
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,

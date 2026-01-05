@@ -113,7 +113,7 @@ class TaskService {
     const parsedPriority = Array.isArray(priority) ? priority : (priority ? priority.split(',') : []);
 
     // Validate status and priority values
-    const validStatuses = ['pending', 'in-progress', 'completed'];
+    const validStatuses = ['pending', 'in_progress', 'completed'];
     const validPriorities = ['low', 'medium', 'high'];
     
     const filteredStatus = parsedStatus.filter(s => validStatuses.includes(s));
@@ -449,9 +449,9 @@ class TaskService {
   _validateStatusTransition(currentStatus, newStatus) {
     // Define valid transitions
     const validTransitions = {
-      'pending': ['in-progress', 'completed'],
-      'in-progress': ['pending', 'completed'],
-      'completed': ['pending', 'in-progress'] // Allow reopening completed tasks
+      'pending': ['in_progress', 'completed'],
+      'in_progress': ['pending', 'completed'],
+      'completed': ['pending', 'in_progress'] // Allow reopening completed tasks
     };
 
     if (!validTransitions[currentStatus] || !validTransitions[currentStatus].includes(newStatus)) {
@@ -472,6 +472,7 @@ class TaskService {
       description: task.description || null,
       status: task.status,
       priority: task.priority,
+      userId: task.userId, // Add userId for GraphQL owner field resolver
       dueDate: task.dueDate || null,
       completedAt: task.completedAt || null,
       createdAt: task.createdAt,

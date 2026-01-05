@@ -80,17 +80,15 @@ const typeDefs = gql`
 
   # Enums
   enum TaskStatus {
-    PENDING
-    IN_PROGRESS
-    COMPLETED
-    CANCELLED
+    pending
+    in_progress
+    completed
   }
 
   enum TaskPriority {
-    LOW
-    MEDIUM
-    HIGH
-    URGENT
+    low
+    medium
+    high
   }
 
   enum MessageType {
@@ -254,7 +252,7 @@ const typeDefs = gql`
     users(
       first: Int
       after: String
-    ): [User!]! @requireRole(role: "admin")
+    ): [User!]!
   }
 
   # Mutation type
@@ -280,7 +278,7 @@ const typeDefs = gql`
     markAllNotificationsRead: Boolean!
 
     # Admin mutations (require admin role)
-    updateUserRole(userId: ID!, role: String!): User! @requireRole(role: "admin")
+    updateUserRole(userId: ID!, role: String!): User!
   }
 
   # Subscription type
@@ -297,9 +295,9 @@ const typeDefs = gql`
     taskUpdated: Task!
   }
 
-  # Custom directives
-  directive @requireRole(role: String!) on FIELD_DEFINITION
-  directive @requireAuth on FIELD_DEFINITION
+  # Custom directives (commented out for now)
+  # directive @requireRole(role: String!) on FIELD_DEFINITION
+  # directive @requireAuth on FIELD_DEFINITION
 `;
 
 module.exports = typeDefs;

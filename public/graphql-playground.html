@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphQL Playground - Productivity Suite</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #1976d2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            display: flex;
+            height: 600px;
+        }
+        .query-panel, .result-panel {
+            flex: 1;
+            padding: 20px;
+        }
+        .query-panel {
+            border-right: 1px solid #eee;
+        }
+        textarea {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .result-area {
+            width: 100%;
+            height: 400px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            background-color: #f9f9f9;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .auth-section {
+            margin-bottom: 15px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+        .examples {
+            margin-top: 15px;
+        }
+        .example-btn {
+            background: #4caf50;
+            font-size: 12px;
+            padding: 5px 10px;
+            margin: 2px;
+        }
+        .example-btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 GraphQL Playground</h1>
+            <p>Productivity Suite API - Test your GraphQL queries</p>
+        </div>
+        
+        <div class="content">
+            <div class="query-panel">
+                <h3>Query</h3>
+                
+                <div class="auth-section">
+                    <label for="authToken">Authorization Token (optional):</label>
+                    <input type="text" id="authToken" placeholder="Bearer your-jwt-token-here">
+                </div>
+                
+                <textarea id="queryInput" placeholder="Enter your GraphQL query here...">
+query {
+  __schema {
+    queryType {
+      name
+    }
+    mutationType {
+      name
+    }
+  }
+}</textarea>
+                
+                <div class="controls">
+                    <button onclick="executeQuery()" id="executeBtn">Execute Query</button>
+                    <button onclick="clearQuery()">Clear</button>
+                    <button onclick="formatQuery()">Format</button>
+                </div>
+                
+                <div class="examples">
+                    <h4>Example Queries:</h4>
+                    <button class="example-btn" onclick="loadExample('schema')">Schema Info</button>
+                    <button class="example-btn" onclick="loadExample('me')">Current User</button>
+                    <button class="example-btn" onclick="loadExample('notes')">List Notes</button>
+                    <button class="example-btn" onclick="loadExample('tasks')">List Tasks</button>
+                    <button class="example-btn" onclick="loadExample('createTask')">Create Task</button>
+                </div>
+            </div>
+            
+            <div class="result-panel">
+                <h3>Result</h3>
+                <div id="resultArea" class="result-area">
+                    Click "Execute Query" to see results here...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const examples = {
+            schema: `query {
+  __schema {
+    queryType {
+      name
+    }
+    mutationType {
+      name
+    }
+  }
+}`,
+            me: `query {
+  me {
+    id
+    email
+    name
+    role
+    createdAt
+  }
+}`,
+            notes: `query {
+  notes(first: 10) {
+    edges {
+      node {
+        id
+        title
+        content
+        tags
+        createdAt
+        owner {
+          email
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+    }
+  }
+}`,
+            tasks: `query {
+  tasks(first: 10) {
+    edges {
+      node {
+        id
+        title
+        description
+        status
+        priority
+        dueDate
+        createdAt
+        owner {
+          email
+        }
+      }
+    }
+  }
+}`,
+            createTask: `mutation {
+  createTask(input: {
+    title: "Test Task from GraphQL"
+    description: "This is a test task"
+    priority: medium
+  }) {
+    id
+    title
+    status
+    priority
+    owner {
+      email
+    }
+  }
+}`
+        };
+
+        function loadExample(type) {
+            document.getElementById('queryInput').value = examples[type];
+        }
+
+        function clearQuery() {
+            document.getElementById('queryInput').value = '';
+            document.getElementById('resultArea').textContent = 'Query cleared. Enter a new query above.';
+        }
+
+        function formatQuery() {
+            const query = document.getElementById('queryInput').value;
+            try {
+                // Simple formatting - add proper indentation
+                const formatted = query
+                    .replace(/\{/g, '{\n  ')
+                    .replace(/\}/g, '\n}')
+                    .replace(/,/g, ',\n  ')
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .join('\n');
+                document.getElementById('queryInput').value = formatted;
+            } catch (error) {
+                console.error('Formatting error:', error);
+            }
+        }
+
+        async function executeQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            const authToken = document.getElementById('authToken').value.trim();
+            const executeBtn = document.getElementById('executeBtn');
+            const resultArea = document.getElementById('resultArea');
+
+            if (!query) {
+                resultArea.textContent = 'Please enter a GraphQL query.';
+                return;
+            }
+
+            executeBtn.disabled = true;
+            executeBtn.textContent = 'Executing...';
+            resultArea.textContent = 'Executing query...';
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+
+                if (authToken) {
+                    headers['Authorization'] = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
+                }
+
+                const response = await fetch('/graphql', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ query })
+                });
+
+                const result = await response.json();
+                resultArea.textContent = JSON.stringify(result, null, 2);
+
+                // Highlight errors
+                if (result.errors) {
+                    resultArea.style.color = '#d32f2f';
+                } else {
+                    resultArea.style.color = '#2e7d32';
+                }
+
+            } catch (error) {
+                resultArea.textContent = `Error: ${error.message}`;
+                resultArea.style.color = '#d32f2f';
+            } finally {
+                executeBtn.disabled = false;
+                executeBtn.textContent = 'Execute Query';
+            }
+        }
+
+        // Allow Ctrl+Enter to execute query
+        document.getElementById('queryInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                executeQuery();
+            }
+        });
+    </script>
+</body>
+</html>
