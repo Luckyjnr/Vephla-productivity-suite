@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const http = require('http');
+const winston = require('winston');
 require('dotenv').config();
 
 const connectDB = require('./config/database');
@@ -20,6 +21,36 @@ const userPreferenceRoutes = require('./routes/userPreferences');
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
+
+// Configure Winston logger
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'productivity-suite' },
+  transports: [
+    new winston.transports.File({ 
+      filename: process.env.LOG_FILE_ERROR || 'logs/error.log', 
+      level: 'error' 
+    }),
+    new winston.transports.File({ 
+      filename: process.env.LOG_FILE_COMBINED || 'logs/combined.log' 
+    })
+  ]
+});
+
+// Add console transport for development
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    )
+  }));
+}
 
 // Connect to database
 connectDB();
@@ -89,9 +120,13 @@ app.use(sanitizeInput);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware for debugging
+// Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  logger.info(`${req.method} ${req.path}`, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
+    timestamp: new Date().toISOString()
+  });
   next();
 });
 
@@ -113,9 +148,9 @@ const startGraphQLServer = async () => {
     }
   });
   
-  console.log(`🚀 GraphQL Server ready at http://localhost:${PORT}${graphqlServer.graphqlPath}`);
+  logger.info(`GraphQL Server ready at http://localhost:${PORT}${graphqlServer.graphqlPath}`);
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`🎮 GraphQL Playground available at http://localhost:${PORT}${graphqlServer.graphqlPath}`);
+    logger.info(`GraphQL Playground available at http://localhost:${PORT}${graphqlServer.graphqlPath}`);
   }
 
   // Add 404 handler AFTER GraphQL middleware is applied
@@ -131,7 +166,13 @@ const startGraphQLServer = async () => {
 
   // Basic error handler
   app.use((err, req, res, next) => {
-    console.error(err.stack);
+    logger.error('Unhandled error:', {
+      error: err.message,
+      stack: err.stack,
+      url: req.url,
+      method: req.method,
+      ip: req.ip
+    });
     res.status(500).json({
       error: {
         code: 'INTERNAL_SERVER_ERROR',
@@ -169,13 +210,13 @@ if (require.main === module) {
       await startGraphQLServer();
       
       server.listen(PORT, () => {
-        console.log(`🚀 Productivity Suite API running on port ${PORT}`);
-        console.log(`📊 Health check: http://localhost:${PORT}/health`);
-        console.log(`🔌 Socket.io server initialized`);
-        console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+        logger.info(`Productivity Suite API running on port ${PORT}`);
+        logger.info(`Health check: http://localhost:${PORT}/health`);
+        logger.info(`Socket.io server initialized`);
+        logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       });
     } catch (error) {
-      console.error('Failed to start server:', error);
+      logger.error('Failed to start server:', error);
       process.exit(1);
     }
   };
@@ -183,4 +224,48 @@ if (require.main === module) {
   startServer();
 }
 
+// Graceful shutdown handling
+const gracefulShutdown = (signal) => {
+  logger.info(`Received ${signal}. Starting graceful shutdown...`);
+  
+  server.close((err) => {
+    if (err) {
+      logger.error('Error during server shutdown:', err);
+      process.exit(1);
+    }
+    
+    logger.info('HTTP server closed');
+    
+    // Close database connection
+    const mongoose = require('mongoose');
+    mongoose.connection.close(() => {
+      logger.info('MongoDB connection closed');
+      logger.info('Graceful shutdown completed');
+      process.exit(0);
+    });
+  });
+  
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions and unhandled rejections
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception:', err);
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  gracefulShutdown('unhandledRejection');
+});
+
 module.exports = app;
+module.exports.logger = logger;
