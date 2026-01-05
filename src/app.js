@@ -11,6 +11,8 @@ const adminRoutes = require('./routes/admin');
 const noteRoutes = require('./routes/notes');
 const taskRoutes = require('./routes/tasks');
 const fileRoutes = require('./routes/files');
+const notificationRoutes = require('./routes/notifications');
+const userPreferenceRoutes = require('./routes/userPreferences');
 
 const app = express();
 const server = http.createServer(app);
@@ -61,6 +63,8 @@ app.use('/admin', adminRoutes);
 app.use('/notes', noteRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/files', fileRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/user/preferences', userPreferenceRoutes);
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {

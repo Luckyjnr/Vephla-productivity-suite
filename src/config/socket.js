@@ -2,6 +2,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const chatController = require('../controllers/chatController');
+const notificationService = require('../services/notificationService');
 
 /**
  * Socket.io authentication middleware
@@ -58,14 +59,28 @@ const initializeSocket = (server) => {
     // Join user to their personal room for notifications
     socket.join(`user:${socket.userId}`);
     
+    // Register user socket for notifications
+    notificationService.registerUserSocket(socket.userId, socket.id);
+    
     // Initialize chat event handlers
     chatController.initializeHandlers(socket, io);
+    
+    // Handle disconnection
+    socket.on('disconnect', (reason) => {
+      console.log(`🔌 User ${socket.user.email} disconnected: ${reason}`);
+      
+      // Unregister user socket from notifications
+      notificationService.unregisterUserSocket(socket.userId);
+    });
     
     // Handle connection errors
     socket.on('error', (error) => {
       console.error(`Socket error for user ${socket.user.email}:`, error);
     });
   });
+
+  // Set Socket.io instance for notification service
+  notificationService.setSocketInstance(io);
 
   return io;
 };
