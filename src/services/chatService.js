@@ -1,4 +1,6 @@
 const messageRepository = require('../repositories/messageRepository');
+const notificationService = require('./notificationService');
+const User = require('../models/User');
 
 /**
  * Chat Service
@@ -40,11 +42,80 @@ class ChatService {
       };
 
       const message = await messageRepository.createMessage(messageData);
+      
+      // Check for mentions and create notifications
+      await this.processMentions(message, userId, room);
+      
       return message.toClientFormat();
 
     } catch (error) {
       console.error('Error sending message:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Process mentions in a message and create notifications
+   */
+  async processMentions(message, senderId, room) {
+    try {
+      const content = message.content;
+      
+      // Find @mentions in the message (e.g., @john@example.com or @username)
+      const mentionRegex = /@([a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|[a-zA-Z0-9._-]+)/g;
+      const mentions = content.match(mentionRegex);
+      
+      if (!mentions || mentions.length === 0) {
+        return;
+      }
+
+      // Get sender info for notification
+      const sender = await User.findById(senderId).select('name email');
+      if (!sender) return;
+
+      // Process each mention
+      for (const mention of mentions) {
+        const cleanMention = mention.substring(1); // Remove @ symbol
+        
+        // Try to find user by email or name
+        let mentionedUser = null;
+        
+        if (cleanMention.includes('@')) {
+          // Email mention
+          mentionedUser = await User.findOne({ email: cleanMention }).select('_id name email');
+        } else {
+          // Username mention (assuming name field)
+          mentionedUser = await User.findOne({ 
+            $or: [
+              { name: { $regex: new RegExp(cleanMention, 'i') } },
+              { email: { $regex: new RegExp(`^${cleanMention}@`, 'i') } }
+            ]
+          }).select('_id name email');
+        }
+
+        if (mentionedUser && mentionedUser._id.toString() !== senderId) {
+          // Create notification for mentioned user
+          await notificationService.createNotification({
+            userId: mentionedUser._id,
+            type: 'chat_mention',
+            title: `${sender.name || sender.email} mentioned you in ${room}`,
+            message: content.length > 100 ? content.substring(0, 100) + '...' : content,
+            priority: 'medium',
+            data: {
+              messageId: message._id,
+              room: room,
+              senderId: senderId,
+              senderName: sender.name || sender.email,
+              fullMessage: content
+            }
+          });
+
+          console.log(`🔔 Created mention notification for ${mentionedUser.email} in room ${room}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing mentions:', error);
+      // Don't throw error - message should still be sent even if notifications fail
     }
   }
 

@@ -190,6 +190,9 @@ class ChatClient {
             console.log('Connected to server');
             this.updateConnectionStatus(true);
             this.addMessage('Connected to server', 'system');
+            
+            // Request notification permission
+            this.requestNotificationPermission();
         });
         
         this.socket.on('disconnect', () => {
@@ -271,6 +274,12 @@ class ChatClient {
             console.error('Connection error:', error);
             this.addMessage(`Connection error: ${error.message}`, 'system');
             this.updateConnectionStatus(false);
+        });
+        
+        // Handle real-time notifications
+        this.socket.on('new_notification', (notification) => {
+            console.log('📱 New notification received:', notification);
+            this.showNotification(notification);
         });
     }
     
@@ -431,6 +440,88 @@ class ChatClient {
             statusDiv.textContent = '';
             statusDiv.className = '';
         }, 3000);
+    }
+    
+    /**
+     * Request notification permission from the browser
+     */
+    requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    this.addMessage('🔔 Browser notifications enabled!', 'system');
+                } else {
+                    this.addMessage('⚠️ Browser notifications disabled. You can enable them in browser settings.', 'system');
+                }
+            });
+        }
+    }
+    
+    /**
+     * Show a real-time notification
+     */
+    showNotification(notification) {
+        // Add notification to chat messages
+        this.addMessage(`🔔 ${notification.title}: ${notification.message}`, 'notification');
+        
+        // Show browser notification if permission granted
+        if (Notification.permission === 'granted') {
+            const browserNotification = new Notification(notification.title, {
+                body: notification.message,
+                icon: '/favicon.ico',
+                tag: notification.id,
+                requireInteraction: notification.priority === 'high'
+            });
+            
+            // Auto-close after 5 seconds unless high priority
+            if (notification.priority !== 'high') {
+                setTimeout(() => {
+                    browserNotification.close();
+                }, 5000);
+            }
+            
+            // Handle click to focus on chat
+            browserNotification.onclick = () => {
+                window.focus();
+                browserNotification.close();
+                
+                // If it's a chat mention, try to join that room
+                if (notification.type === 'chat_mention' && notification.data?.room) {
+                    document.getElementById('roomName').value = notification.data.room;
+                    this.joinRoom();
+                }
+            };
+        } else if (Notification.permission !== 'denied') {
+            // Request permission for future notifications
+            Notification.requestPermission();
+        }
+        
+        // Play notification sound (optional)
+        this.playNotificationSound();
+    }
+    
+    /**
+     * Play a subtle notification sound
+     */
+    playNotificationSound() {
+        try {
+            // Create a simple beep sound using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (error) {
+            console.log('Could not play notification sound:', error);
+        }
     }
 }
 

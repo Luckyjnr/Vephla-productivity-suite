@@ -62,6 +62,14 @@
             border-radius: 3px;
         }
         
+        .message.notification {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 3px;
+            color: #856404;
+            font-weight: bold;
+        }
+        
         .input-group {
             display: flex;
             gap: 10px;
@@ -158,7 +166,7 @@
             <div class="messages" id="messages"></div>
             
             <div class="input-group">
-                <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+                <input type="text" id="messageInput" placeholder="Type a message... (use @email or @name to mention users)" disabled>
                 <button id="sendMessageBtn" disabled>Send</button>
                 <button id="clearMessagesBtn">Clear</button>
             </div>
