@@ -6,11 +6,17 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
+    "prod": "NODE_ENV=production node src/app.js",
+    "build": "echo 'No build step required for Node.js backend'",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:property": "jest --testNamePattern=\"Property\"",
-    "test:integration": "jest --testNamePattern=\"Integration\""
+    "test:integration": "jest --testNamePattern=\"Integration\"",
+    "test:ci": "jest --ci --coverage --watchAll=false",
+    "lint": "echo 'Linting not configured'",
+    "prestart": "node -e \"console.log('Starting Productivity Suite...')\"",
+    "postinstall": "mkdir -p logs uploads"
   },
   "keywords": [
     "nodejs",
